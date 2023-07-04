@@ -84,6 +84,73 @@ func encodeDomain(domainName string) []byte {
 	return output
 }
 
+type DNSResponseParser struct {
+	buffer *bytes.Buffer
+}
+
+func NewParser(response []byte) *DNSResponseParser {
+	return &DNSResponseParser{bytes.NewBuffer(response)}
+}
+
+func (d *DNSResponseParser) parseHeader() (*DNSHeader, error) {
+	header := &DNSHeader{}
+
+	err := binary.Read(d.buffer, binary.BigEndian, header)
+	if err != nil {
+		return nil, err
+	}
+
+	return header, nil
+}
+
+func (d *DNSResponseParser) parseQuestion() (*DNSQuestion, error) {
+	// Read domain name
+	nameParts := make([][]byte, 0)
+
+	for {
+		lenByte := make([]byte, 1)
+		_, err := d.buffer.Read(lenByte)
+		if err != nil {
+			return nil, err
+		}
+
+		partLength := int(lenByte[0])
+		if partLength == 0 {
+			break
+		}
+
+		namePart := make([]byte, partLength)
+		_, err = d.buffer.Read(namePart)
+		if err != nil {
+			return nil, err
+		}
+
+		nameParts = append(nameParts, namePart)
+	}
+
+	name := bytes.Join(nameParts, []byte("."))
+
+	question := &DNSQuestion{}
+	question.domainName = name
+
+	buf := make([]byte, 2)
+
+	// Read record type
+	_, err := d.buffer.Read(buf)
+	if err != nil {
+		return nil, err
+	}
+	question.recordType = binary.BigEndian.Uint16(buf)
+
+	// Read record class
+	_, err = d.buffer.Read(buf)
+	if err != nil {
+		return nil, err
+	}
+	question.recordClass = binary.BigEndian.Uint16(buf)
+
+	return question, nil
+}
 func main() {
 	query := buildQuery("www.example.com", typeARecord)
 
@@ -117,5 +184,16 @@ func main() {
 	}
 
 	response := buffer[:n]
-	fmt.Println("Response:", response)
+
+	parser := NewParser(response)
+
+	_, err = parser.parseHeader()
+	if err != nil {
+		log.Fatal("Failed to parse response header:", err)
+	}
+
+	_, err = parser.parseQuestion()
+	if err != nil {
+		log.Fatal("Failed to parse question:", err)
+	}
 }

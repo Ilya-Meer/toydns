@@ -40,3 +40,21 @@ func TestBuildQuery(t *testing.T) {
 		}
 	}
 }
+
+func TestParseHeader(t *testing.T) {
+	sampleDNSResponse := []byte{134, 253, 129, 128, 0, 1, 0, 1, 0, 0, 0, 0, 3, 119, 119, 119, 7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0, 0, 1, 0, 1, 192, 12, 0, 1, 0, 1, 0, 0, 80, 205, 0, 4, 93, 184, 216, 34}
+
+	p := NewParser(sampleDNSResponse)
+	header, err := p.parseHeader()
+	if err != nil {
+		t.Fatal("Failed to parse DNS header:", err)
+	}
+
+	if header.Flags != 0x8180 {
+		t.Fatalf("expected %d but got %d", 0x8180, header.Flags)
+	}
+
+	if header.NumQuestions != 0x1 {
+		t.Fatalf("expected %d but got %d", 0x1, header.NumQuestions)
+	}
+}
