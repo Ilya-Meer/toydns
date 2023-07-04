@@ -27,7 +27,6 @@ func TestBuildQuery(t *testing.T) {
 	sampleQueryBytes, err := hex.DecodeString(sampleQueryHex)
 	if err != nil {
 		t.Fatal("Failed to decode hex string:", err)
-		return
 	}
 
 	host := "www.example.com"

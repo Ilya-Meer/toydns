@@ -16,12 +16,18 @@ const (
 )
 
 type DNSHeader struct {
-	queryID        uint16
-	flags          uint16
-	numQuestions   uint16
-	numAnswers     uint16
-	numAuthorities uint16
-	numAdditionals uint16
+	QueryID        uint16
+	Flags          uint16
+	NumQuestions   uint16
+	NumAnswers     uint16
+	NumAuthorities uint16
+	NumAdditionals uint16
+}
+
+type DNSQuestion struct {
+	domainName  []byte
+	recordType  uint16
+	recordClass uint16
 }
 
 func buildQuery(domainName string, recordType uint16) []byte {
@@ -29,13 +35,16 @@ func buildQuery(domainName string, recordType uint16) []byte {
 	id := rand.Intn(1 << 16)
 	recursionDesiredFlag := 1 << 8
 
+	// number of bytes of domain name, record type, and class
+	questionLength := len(name) + 2 + 2
+
 	header := DNSHeader{
-		queryID:      uint16(id),
-		flags:        uint16(recursionDesiredFlag),
-		numQuestions: 1,
+		QueryID:      uint16(id),
+		Flags:        uint16(recursionDesiredFlag),
+		NumQuestions: 1,
 	}
 
-	querySize := binary.Size(header) + len(name) + 4
+	querySize := binary.Size(header) + questionLength
 	queryBuf := bytes.NewBuffer(make([]byte, 0, querySize))
 
 	err := binary.Write(queryBuf, binary.BigEndian, &header)
